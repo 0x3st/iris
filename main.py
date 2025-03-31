@@ -57,27 +57,29 @@ def box(shape:turtle.Turtle) -> tuple[tuple[float, float], tuple[float, float]]:
         in the format ((x_min, x_max), (y_min, y_max)).
     '''
     shapepoly = shape.get_shapepoly()
-    xs = [x for x,y in shapepoly]
-    ys = [y for x,y in shapepoly]
+    # Use zip to separate x and y coordinates more efficiently
+    xs, ys = zip(*shapepoly)
     return (min(xs), max(xs)), (min(ys), max(ys))
 
 def box_check(bounding_box1: tuple, bounding_box2: tuple) -> bool:
     '''
-	Check if two bounding boxes overlap.
-	
-	Args:
-        bounding_box1 (tuple): The first bounding box.
-        bounding_box2 (tuple): The second bounding box.
-		
-	Returns:
+    Check if two bounding boxes overlap.
+    
+    Args:
+        bounding_box1 (tuple): The first bounding box in format ((x_min, x_max), (y_min, y_max)).
+        bounding_box2 (tuple): The second bounding box in format ((x_min, x_max), (y_min, y_max)).
+    
+    Returns:
         bool: True if the bounding boxes overlap, False otherwise.
     '''
-    x1_min, x1_max = bounding_box1[0]
-    y1_min, y1_max = bounding_box1[1]
-    x2_min, x2_max = bounding_box2[0]
-    y2_min, y2_max = bounding_box2[1]
-
-    return not (x1_max < x2_min or x2_max < x1_min or y1_max < y2_min or y2_max < y1_min)
+    (x1_min, x1_max), (y1_min, y1_max) = bounding_box1
+    (x2_min, x2_max), (y2_min, y2_max) = bounding_box2
+    
+    # Boxes overlap if they overlap in both x and y dimensions
+    x_overlap = x1_min <= x2_max and x2_min <= x1_max
+    y_overlap = y1_min <= y2_max and y2_min <= y1_max
+    
+    return x_overlap and y_overlap
 
 def is_separating_axis(poly1: list[tuple[float, float]], poly2: list[tuple[float, float]], axis: tuple[float, float]) -> bool:
     '''
