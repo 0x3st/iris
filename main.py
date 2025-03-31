@@ -25,7 +25,7 @@ import random
 import time
 
 # global constants
-YOUR_ID = 'xxxxxx'   # TODO: your student id
+YOUR_ID = '124020372'   # TODO: your student id
 COLORS = ('green', 'blue', 'yellow', 'orange', 'purple', 'pink', 'brown')
 SHAPE_FILE = 'shapes.txt'
 SCREEN_DIM_X = 0.7  # screen width factor
@@ -45,228 +45,10 @@ g_screen = None
 g_range_x = None
 g_range_y = None
 
-def box(shape:turtle.Turtle) -> tuple[tuple[float, float], tuple[float, float]]:
-    '''
-    Calculate the bounding box of a turtle shape.
-    
-    Args:
-        shape (turtle.Turtle): The turtle shape to calculate the bounding box for.
-    
-    Returns:
-        tuple: A tuple containing the coordinates of the bounding box
-        in the format ((x_min, x_max), (y_min, y_max)).
-    '''
-    shapepoly = shape.get_shapepoly()
-    # Use zip to separate x and y coordinates more efficiently
-    xs, ys = zip(*shapepoly)
-    return (min(xs), max(xs)), (min(ys), max(ys))
-
-def box_check(bounding_box1: tuple, bounding_box2: tuple) -> bool:
-    '''
-    Check if two bounding boxes overlap.
-    
-    Args:
-        bounding_box1 (tuple): The first bounding box in format ((x_min, x_max), (y_min, y_max)).
-        bounding_box2 (tuple): The second bounding box in format ((x_min, x_max), (y_min, y_max)).
-    
-    Returns:
-        bool: True if the bounding boxes overlap, False otherwise.
-    '''
-    (x1_min, x1_max), (y1_min, y1_max) = bounding_box1
-    (x2_min, x2_max), (y2_min, y2_max) = bounding_box2
-    
-    # Boxes overlap if they overlap in both x and y dimensions
-    x_overlap = x1_min <= x2_max and x2_min <= x1_max
-    y_overlap = y1_min <= y2_max and y2_min <= y1_max
-    
-    return x_overlap and y_overlap
-
-def is_separating_axis(poly1: list[tuple[float, float]], poly2: list[tuple[float, float]], axis: tuple[float, float]) -> bool:
-    '''
-    Check if the given axis is a separating axis for the two polygons.
-	
-    Args:
-        poly1 (list[tuple[float, float]]): The first polygon represented as a list of vertices.
-        poly2 (list[tuple[float, float]]): The second polygon represented as a list of vertices.
-        axis (tuple[float, float]): The axis to check for separation.
-		
-	Return:
-        bool: True if the axis is a separating axis, False otherwise.
-    '''
-    # calculate the projection of poly1
-    min1 = max1 = poly1[0][0] * axis[0] + poly1[0][1] * axis[1]
-    for point in poly1[1:]:
-        projection = point[0] * axis[0] + point[1] * axis[1]
-        min1 = min(min1, projection)
-        max1 = max(max1, projection)
-    
-    # calculate the projection of poly2
-    min2 = max2 = poly2[0][0] * axis[0] + poly2[0][1] * axis[1]
-    for point in poly2[1:]:
-        projection = point[0] * axis[0] + point[1] * axis[1]
-        min2 = min(min2, projection)
-        max2 = max(max2, projection)
-    
-    # check if the projections overlap
-    return not (max1 < min2 or max2 < min1)
-
-def get_edges(poly:list[tuple[float, float]]) -> list[tuple[tuple[float, float], tuple[float, float]]]:
-    '''
-	Get all the edges of the polygon.
-	
-	Args:
-        poly (list[tuple[float, float]]): The polygon represented as a list of vertices.
-	
-	Return:
-        list: A list of edges represented as tuples of vertices.
-	'''
-    edges = []
-    for i in range(len(poly)):
-        p1 = poly[i]
-        p2 = poly[(i+1) % len(poly)]
-        edges.append( (p1, p2) )
-    return edges
-
-def normalize(vector:tuple[float, float]) -> tuple[float, float]:
-    '''
-	Normalize a vector to unit length.
-    
-	Args:
-        vector (tuple[float, float]): The vector to normalize.
-		
-	Return:
-        tuple: The normalized vector.
-	'''
-    x, y = vector
-    length = (x**2 + y**2)**0.5
-    if length == 0:
-        return (0, 0)
-    return (x / length, y / length)
-
-def get_axes(poly:list[tuple[float, float]]) -> list[tuple[float, float]]:
-    '''
-	Get normal vectors of each edge of the polygon.
-	
-	Args:
-        poly (list[tuple[float, float]]): The polygon represented as a list of vertices.
-		
-	Return:
-        list: A list of normal vectors for each edge of the polygon.
-	'''
-    axes = []
-    for (p1, p2) in get_edges(poly):
-        # vector of edge
-        edge_x = p2[0] - p1[0]
-        edge_y = p2[1] - p1[1]
-        # normal vector
-        normal = (-edge_y, edge_x)
-        axes.append( normalize(normal) )
-    return axes
-
-def sat_check(poly1:list[tuple[float, float]], poly2:list[tuple[float, float]]) -> bool:
-    '''
-    Use SAT check to tell if two polygons are overlapping.
-	
-	Args:
-        poly1 (list[tuple[float, float]]): The first polygon represented as a list of vertices.
-        poly2 (list[tuple[float, float]]): The second polygon represented as a list of vertices.
-		
-	Return:
-        bool: True if the polygons overlap, False otherwise.
-    '''
-    axes = get_axes(poly1) + get_axes(poly2)
-    
-    for axis in axes:
-        if is_separating_axis(poly1, poly2, axis):
-            return False
-    return True
-
-def ray_check(point:tuple[float, float], polygon:list[tuple[float, float]]) -> bool:
-    '''
-    Check if a point is inside a polygon using the ray-casting algorithm.
-
-    Args:
-        point (tuple[float, float]): The point to check, represented as (x, y).
-        polygon (list[tuple[float, float]]): The polygon represented as a list of coordinates.
-    
-    Returns:
-        bool: True if the point is inside the polygon, False otherwise.
-    '''
-    x, y = point
-    inside = False
-    n = len(polygon)
-    
-    for i in range(n):
-        x1, y1 = polygon[i]
-        x2, y2 = polygon[(i+1) % n]
-    
-        if (y1 > y) == (y2 > y):
-            continue
-            
-        x_intersect = (y - y1) * (x2 - x1) / (y2 - y1) + x1
-        
-        if x <= x_intersect:
-            inside = not inside
-    
-    return inside
-
-def contains(poly1: list[tuple[float, float]], poly2:list[tuple[float, float]], tolerance=1e-6) -> bool:
-    '''
-    Check if polygon1 contains polygon2.
-
-    Args:
-        poly1 (list[tuple[float, float]]): The first polygon represented as a list of coordinates.
-        poly2 (list[tuple[float, float]]): The second polygon represented as a list of coordinates.
-    
-    Return:
-        bool: True if polygon1 contains polygon2, False otherwise.
-    '''
-    for (x, y) in poly2:
-        if not ray_check((x, y), poly1):
-            return False
-    return True
-
-def contain_check(poly1:list[tuple[float, float]], poly2:list[tuple[float, float]]) -> tuple[bool, bool]:
-    '''
-    Combines ray_check and contains functions to check if one polygon contains another.
-
-    Args:
-        poly1 (list[tuple[float, float]]): The first polygon represented as a list of coordinates.
-        poly2 (list[tuple[float, float]]): The second polygon represented as a list of coordinates.
-    
-    Return:
-        tuple: A tuple containing two boolean values:
-            - True if poly1 contains poly2
-            - True if poly2 contains poly1
-    '''
-    xs1 = [x for x,y in poly1]
-    ys1 = [y for x,y in poly1]
-    xs2 = [x for x,y in poly2]
-    ys2 = [y for x,y in poly2]
-    
-    x1_min, x1_max = min(xs1), max(xs1)
-    y1_min, y1_max = min(ys1), max(ys1)
-    x2_min, x2_max = min(xs2), max(xs2)
-    y2_min, y2_max = min(ys2), max(ys2)
-    
-    if (x2_min < x1_min or x2_max > x1_max or 
-        y2_min < y1_min or y2_max > y1_max):
-        contain_1to2 = False
-    else:
-        contain_1to2 = contains(poly1, poly2)
-    
-    if (x1_min < x2_min or x1_max > x2_max or 
-        y1_min < y2_min or y1_max > y2_max):
-        contain_2to1 = False
-    else:
-        contain_2to1 = contains(poly2, poly1)
-    
-    return contain_1to2, contain_2to1
-
 def is_shape_overlapped_any(shape:turtle.Turtle, shapes:list[turtle.Turtle]) -> bool:
 	'''
-	TODO: check if shape is overlapped with any of the shapes
-	TODO: problem decomposition, clean code, refactoring
+	Check if shape is overlapped with any of the shapes in the list.
+	Uses problem decomposition by checking for various overlap conditions.
 
 	Args:
 		shape (turtle.Turtle): The shape to check for overlap.
@@ -275,47 +57,210 @@ def is_shape_overlapped_any(shape:turtle.Turtle, shapes:list[turtle.Turtle]) -> 
 	Returns:
 		bool: True if the shape overlaps with any shape in the list, False otherwise.
 	'''
-	# Pre-compute shape's polygon and bounding box to avoid recalculating
-	shape_poly = shape.get_shapepoly()
-	shape_bbox = box(shape)
+	# Handle edge cases
+	if is_empty_or_self_check(shape, shapes):
+		return False
 	
-	for other_shape in shapes:
-		if other_shape == shape: 
+	# Get shape bounds
+	shape_bounds = get_shape_bounds(shape)
+	
+	# Check against each existing shape
+	for existing_shape in shapes:
+		# Quick distance check first for efficiency
+		if not are_shapes_potentially_overlapping(shape, existing_shape):
 			continue
-			
-		# Fast bounding box check first
-		other_bbox = box(other_shape)
-		if box_check(shape_bbox, other_bbox):
-			# Only calculate polygon if bounding boxes overlap
-			other_poly = other_shape.get_shapepoly()
-			
-			# Quick containment check using bounding box data
-			xs1 = [x for x,y in shape_poly]
-			ys1 = [y for x,y in shape_poly]
-			xs2 = [x for x,y in other_poly]
-			ys2 = [y for x,y in other_poly]
-			
-			x1_min, x1_max = min(xs1), max(xs1)
-			y1_min, y1_max = min(ys1), max(ys1)
-			x2_min, x2_max = min(xs2), max(xs2)
-			y2_min, y2_max = min(ys2), max(ys2)
-			
-			# Check if one shape might be contained in the other
-			possible_containment = ((x1_min >= x2_min and x1_max <= x2_max and 
-									 y1_min >= y2_min and y1_max <= y2_max) or
-									(x2_min >= x1_min and x2_max <= x1_max and 
-									 y2_min >= y1_min and y2_max <= y1_max))
-			
-			if possible_containment:
-				# Perform detailed containment check only if needed
-				if contains(shape_poly, other_poly) or contains(other_poly, shape_poly):
-					return True
-			
-			# Only perform SAT check if no containment was found
-			elif sat_check(shape_poly, other_poly):
-				return True
+		
+		# Get bounds of existing shape
+		existing_bounds = get_shape_bounds(existing_shape)
+		
+		# Check for overlap or containment
+		if is_bounds_overlap(shape_bounds, existing_bounds) or is_one_bound_inside_other(shape_bounds, existing_bounds):
+			return True
 	
+	# No overlap found
 	return False
+
+def is_empty_or_self_check(shape:turtle.Turtle, shapes:list[turtle.Turtle]) -> bool:
+	'''
+	Check if the shapes list is empty or if we're checking against the shape itself.
+	
+	Args:
+		shape (turtle.Turtle): The shape being checked.
+		shapes (list[turtle.Turtle]): List of shapes to check against.
+		
+	Returns:
+		bool: True if the list is empty or the shape is in the list, False otherwise.
+	'''
+	return not shapes or shape in shapes
+
+def are_shapes_potentially_overlapping(shape1:turtle.Turtle, shape2:turtle.Turtle) -> bool:
+	'''
+	Quick check to see if two shapes are even close enough to potentially overlap.
+	This is a performance optimization to avoid more expensive calculations.
+	
+	Args:
+		shape1 (turtle.Turtle): First shape to check.
+		shape2 (turtle.Turtle): Second shape to check.
+		
+	Returns:
+		bool: True if shapes are close enough to potentially overlap.
+	'''
+	# Get center positions
+	x1, y1 = shape1.xcor(), shape1.ycor()
+	x2, y2 = shape2.xcor(), shape2.ycor()
+	
+	# Get shape dimensions
+	w1, h1 = get_shape_dimensions(shape1)
+	w2, h2 = get_shape_dimensions(shape2)
+	
+	# Calculate maximum possible distance for overlap
+	max_distance_x = (w1 + w2) / 2
+	max_distance_y = (h1 + h2) / 2
+	
+	# Check if they're too far apart
+	return abs(x1 - x2) <= max_distance_x and abs(y1 - y2) <= max_distance_y
+
+def get_shape_bounds(shape:turtle.Turtle) -> tuple[float, float, float, float]:
+	'''
+	Get the bounds (left, right, bottom, top) of a shape.
+	
+	Args:
+		shape (turtle.Turtle): The shape to get bounds for.
+		
+	Returns:
+		tuple[float, float, float, float]: The bounds as (left, right, bottom, top).
+	'''
+	x, y = shape.xcor(), shape.ycor()
+	width, height = get_shape_dimensions(shape)
+	half_width, half_height = width/2, height/2
+	
+	# Calculate the bounds
+	left = x - half_width
+	right = x + half_width
+	bottom = y - half_height
+	top = y + half_height
+	
+	return (left, right, bottom, top)
+
+def get_shape_dimensions(shape:turtle.Turtle) -> tuple[float, float]:
+	'''
+	Get the width and height of a shape based on its stretch factors.
+	
+	Args:
+		shape (turtle.Turtle): The shape to get dimensions for.
+		
+	Returns:
+		tuple[float, float]: A tuple containing (width, height) of the shape.
+	'''
+	# Get shape's stretch factors
+	stretch_wid, stretch_len, _ = shape.shapesize()
+	
+	# Get base dimensions based on shape type
+	base_width, base_height = get_base_dimensions(shape)
+	
+	# Calculate actual dimensions
+	width = base_width * stretch_len
+	height = base_height * stretch_wid
+	
+	return width, height
+
+def get_base_dimensions(shape:turtle.Turtle) -> tuple[float, float]:
+	'''
+	Get the base dimensions for a shape based on its type.
+	
+	Args:
+		shape (turtle.Turtle): The shape to get base dimensions for.
+		
+	Returns:
+		tuple[float, float]: Base width and height of the shape.
+	'''
+	shape_name = shape.shape()
+	
+	# For standard shapes
+	if shape_name == 'circle':
+		return 20, 20
+	elif shape_name == 'square':
+		return 20, 20
+	elif shape_name == 'triangle':
+		return 20, 20
+	elif shape_name == 'classic': # Arrow shape
+		return 20, 20
+	
+	# For custom shapes from the shapes.txt file
+	if '_rect' in shape_name:
+		return 30, 30  # Rectangles
+	elif '_star' in shape_name:
+		return 45, 45  # Stars (larger)
+	
+	# Default for other shapes
+	return 30, 30
+
+def is_bounds_overlap(bounds1:tuple[float, float, float, float], 
+				  bounds2:tuple[float, float, float, float]) -> bool:
+	'''
+	Check if two bounds overlap.
+	
+	Args:
+		bounds1 (tuple): First bounds (left, right, bottom, top).
+		bounds2 (tuple): Second bounds (left, right, bottom, top).
+		
+	Returns:
+		bool: True if the bounds overlap, False otherwise.
+	'''
+	left1, right1, bottom1, top1 = bounds1
+	left2, right2, bottom2, top2 = bounds2
+	
+	# Check if bounds don't overlap on x-axis
+	if right1 < left2 or right2 < left1:
+		return False
+	
+	# Check if bounds don't overlap on y-axis
+	if top1 < bottom2 or top2 < bottom1:
+		return False
+	
+	# If we reach here, the bounds overlap
+	return True
+
+def is_one_bound_inside_other(bounds1:tuple[float, float, float, float], 
+						  bounds2:tuple[float, float, float, float]) -> bool:
+	'''
+	Check if one bound is completely inside the other.
+	
+	Args:
+		bounds1 (tuple): First bounds (left, right, bottom, top).
+		bounds2 (tuple): Second bounds (left, right, bottom, top).
+		
+	Returns:
+		bool: True if one bound is inside the other, False otherwise.
+	'''
+	# Check if bounds1 is inside bounds2
+	is_bounds1_inside_bounds2 = is_bound_inside_another(bounds1, bounds2)
+	
+	# Check if bounds2 is inside bounds1
+	is_bounds2_inside_bounds1 = is_bound_inside_another(bounds2, bounds1)
+	
+	return is_bounds1_inside_bounds2 or is_bounds2_inside_bounds1
+
+def is_bound_inside_another(inner:tuple[float, float, float, float], 
+					   outer:tuple[float, float, float, float]) -> bool:
+	'''
+	Check if the inner bound is completely inside the outer bound.
+	
+	Args:
+		inner (tuple): Inner bounds (left, right, bottom, top).
+		outer (tuple): Outer bounds (left, right, bottom, top).
+		
+	Returns:
+		bool: True if inner is inside outer, False otherwise.
+	'''
+	left_in, right_in, bottom_in, top_in = inner
+	left_out, right_out, bottom_out, top_out = outer
+	
+	# Check if all edges of inner are inside outer
+	return (left_in >= left_out and 
+			right_in <= right_out and 
+			bottom_in >= bottom_out and 
+			top_in <= top_out)
 
 ############################################
 ################## template ################
@@ -585,4 +530,3 @@ def main() -> None:
 if __name__ == '__main__':
 	main()
 	g_screen.mainloop()
-
