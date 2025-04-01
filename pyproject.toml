@@ -1,7 +1,0 @@
-[project]
-name = "iris"
-version = "1.0.0"
-description = "A simple app that randomly put random shapes from shapes.txt"
-readme = "README.md"
-requires-python = ">=3.13"
-dependencies = []
