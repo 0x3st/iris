@@ -45,51 +45,222 @@ g_screen = None
 g_range_x = None
 g_range_y = None
 
-
-
 ########################################################
-################## helper functions ####################
+################## MAIN CHECK #########################
 ########################################################
 
-def is_empty_or_self_check(shape:turtle.Turtle, shapes:list[turtle.Turtle]) -> bool:
+def is_shape_overlapped_any(shape:turtle.Turtle, shapes:list[turtle.Turtle]) -> bool:
 	'''
-	Check if the shapes list is empty or if we're checking against the shape itself.
+	Check if shape is overlapped with any of the shapes in the list.
+	Uses a uniform boundary calculation approach for all shapes.
+
+	Args:
+		shape (turtle.Turtle): The shape to check for overlap.
+		shapes (list[turtle.Turtle]): List of shapes to check overlap with.
+	
+	Returns:
+		bool: True if the shape overlaps with any shape in the list, False otherwise.
+	'''
+	# Handle edge cases
+	if not shapes or shape in shapes:
+		return False
+	
+	# Get shape bounds
+	shape_bounds = get_shape_bounds(shape)
+	
+	# Check against each existing shape
+	for existing_shape in shapes:
+		# Skip detailed checks if shapes are far apart
+		if not are_centers_close_enough(shape, existing_shape):
+			continue
+		
+		# Get bounds of existing shape
+		existing_bounds = get_shape_bounds(existing_shape)
+		
+		# Use the fundamental box_check function to determine relationship
+		relationship = box_check(shape_bounds, existing_bounds)
+		
+		# If any overlap or containment, return True
+		if relationship != BOX_SEPARATE:
+			return True
+	
+	# No overlap found
+	return False
+
+########################################################
+################## BOX CHECK ##########################
+########################################################
+
+# Relationship constants
+BOX_SEPARATE = 0      # Boxes don't interact
+BOX_OVERLAP = 1       # Boxes partially overlap
+BOX_A_INSIDE_B = 2    # Box A is fully inside Box B
+BOX_B_INSIDE_A = 3    # Box B is fully inside Box A
+
+def box_check(box_a:tuple[float, float, float, float], 
+           box_b:tuple[float, float, float, float]) -> int:
+	'''
+	Fundamental function to check the relationship between two bounding boxes.
+	This is the core function used by all bounds checking operations.
 	
 	Args:
-		shape (turtle.Turtle): The shape being checked.
-		shapes (list[turtle.Turtle]): List of shapes to check against.
+		box_a (tuple): First box bounds as (left, right, bottom, top).
+		box_b (tuple): Second box bounds as (left, right, bottom, top).
 		
 	Returns:
-		bool: True if the list is empty or the shape is in the list, False otherwise.
+		int: Relationship code:
+			 BOX_SEPARATE (0): Boxes don't interact
+			 BOX_OVERLAP (1): Boxes partially overlap
+			 BOX_A_INSIDE_B (2): Box A is fully inside Box B
+			 BOX_B_INSIDE_A (3): Box B is fully inside Box A
 	'''
-	return not shapes or shape in shapes
+	# Unpack bounds
+	left_a, right_a, bottom_a, top_a = box_a
+	left_b, right_b, bottom_b, top_b = box_b
+	
+	# Check if boxes are separate
+	if is_horizontally_separate(left_a, right_a, left_b, right_b) or \
+	   is_vertically_separate(bottom_a, top_a, bottom_b, top_b):
+		return BOX_SEPARATE
+	
+	# Check if box_a is inside box_b
+	if is_box_inside_another((left_a, right_a, bottom_a, top_a), 
+						  (left_b, right_b, bottom_b, top_b)):
+		return BOX_A_INSIDE_B
+	
+	# Check if box_b is inside box_a
+	if is_box_inside_another((left_b, right_b, bottom_b, top_b), 
+						  (left_a, right_a, bottom_a, top_a)):
+		return BOX_B_INSIDE_A
+	
+	# If not separate and no containment, then they must overlap
+	return BOX_OVERLAP
 
-def are_shapes_potentially_overlapping(shape1:turtle.Turtle, shape2:turtle.Turtle) -> bool:
+def is_horizontally_separate(left_a:float, right_a:float, left_b:float, right_b:float) -> bool:
 	'''
-	Quick check to see if two shapes are even close enough to potentially overlap.
-	This is a performance optimization to avoid more expensive calculations.
+	Check if two ranges on x-axis are separate.
+	
+	Args:
+		left_a, right_a: First range on x-axis.
+		left_b, right_b: Second range on x-axis.
+		
+	Returns:
+		bool: True if ranges don't overlap.
+	'''
+	return right_a < left_b or right_b < left_a
+
+def is_vertically_separate(bottom_a:float, top_a:float, bottom_b:float, top_b:float) -> bool:
+	'''
+	Check if two ranges on y-axis are separate.
+	
+	Args:
+		bottom_a, top_a: First range on y-axis.
+		bottom_b, top_b: Second range on y-axis.
+		
+	Returns:
+		bool: True if ranges don't overlap.
+	'''
+	return top_a < bottom_b or top_b < bottom_a
+
+def is_box_inside_another(inner:tuple[float, float, float, float], 
+					 outer:tuple[float, float, float, float]) -> bool:
+	'''
+	Check if one box is completely inside another.
+	
+	Args:
+		inner: Inner box as (left, right, bottom, top).
+		outer: Outer box as (left, right, bottom, top).
+		
+	Returns:
+		bool: True if inner is inside outer.
+	'''
+	left_in, right_in, bottom_in, top_in = inner
+	left_out, right_out, bottom_out, top_out = outer
+	
+	# For inner to be inside outer, all of inner's edges must be within outer's edges
+	return (left_in >= left_out and right_in <= right_out and 
+			bottom_in >= bottom_out and top_in <= top_out)
+
+def is_bounds_overlap(bounds1:tuple[float, float, float, float], 
+				  bounds2:tuple[float, float, float, float]) -> bool:
+	'''
+	Check if two bounds overlap.
+	
+	Args:
+		bounds1 (tuple): First bounds (left, right, bottom, top).
+		bounds2 (tuple): Second bounds (left, right, bottom, top).
+		
+	Returns:
+		bool: True if the bounds overlap, False otherwise.
+	'''
+	# Use box_check to determine relationship
+	relationship = box_check(bounds1, bounds2)
+	
+	# Overlap if any interaction (overlap or containment)
+	return relationship == BOX_OVERLAP or relationship == BOX_A_INSIDE_B or relationship == BOX_B_INSIDE_A
+
+def is_one_bound_inside_other(bounds1:tuple[float, float, float, float], 
+						  bounds2:tuple[float, float, float, float]) -> bool:
+	'''
+	Check if one bound is completely inside the other.
+	
+	Args:
+		bounds1 (tuple): First bounds (left, right, bottom, top).
+		bounds2 (tuple): Second bounds (left, right, bottom, top).
+		
+	Returns:
+		bool: True if one bound is inside the other, False otherwise.
+	'''
+	# Use box_check to determine relationship
+	relationship = box_check(bounds1, bounds2)
+	
+	# One is inside the other if either containment relationship
+	return relationship == BOX_A_INSIDE_B or relationship == BOX_B_INSIDE_A
+
+def is_bound_inside_another(inner:tuple[float, float, float, float], 
+					   outer:tuple[float, float, float, float]) -> bool:
+	'''
+	Check if the inner bound is completely inside the outer bound.
+	
+	Args:
+		inner (tuple): Inner bounds (left, right, bottom, top).
+		outer (tuple): Outer bounds (left, right, bottom, top).
+		
+	Returns:
+		bool: True if inner is inside outer, False otherwise.
+	'''
+	# Use the helper function from box_check
+	return is_box_inside_another(inner, outer)
+
+########################################################
+################## HELPER FUNCTIONS ###################
+########################################################
+
+def are_centers_close_enough(shape1:turtle.Turtle, shape2:turtle.Turtle) -> bool:
+	'''
+	Quick check if two shapes' centers are close enough to warrant detailed checking.
 	
 	Args:
 		shape1 (turtle.Turtle): First shape to check.
 		shape2 (turtle.Turtle): Second shape to check.
 		
 	Returns:
-		bool: True if shapes are close enough to potentially overlap.
+		bool: True if shapes might overlap based on center distance.
 	'''
-	# Get center positions
+	# Get positions
 	x1, y1 = shape1.xcor(), shape1.ycor()
 	x2, y2 = shape2.xcor(), shape2.ycor()
 	
-	# Get shape dimensions
-	w1, h1 = get_shape_dimensions(shape1)
-	w2, h2 = get_shape_dimensions(shape2)
+	# Get dimensions
+	width1, height1 = get_shape_dimensions(shape1)
+	width2, height2 = get_shape_dimensions(shape2)
 	
-	# Calculate maximum possible distance for overlap
-	max_distance_x = (w1 + w2) / 2
-	max_distance_y = (h1 + h2) / 2
+	# Maximum distance for overlap
+	max_x_distance = (width1 + width2) / 2
+	max_y_distance = (height1 + height2) / 2
 	
-	# Check if they're too near to each other
-	return abs(x1 - x2) <= max_distance_x and abs(y1 - y2) <= max_distance_y
+	# Fast check using rectangular distance
+	return abs(x1 - x2) <= max_x_distance and abs(y1 - y2) <= max_y_distance
 
 def get_shape_bounds(shape:turtle.Turtle) -> tuple[float, float, float, float]:
 	'''
@@ -103,9 +274,23 @@ def get_shape_bounds(shape:turtle.Turtle) -> tuple[float, float, float, float]:
 	'''
 	x, y = shape.xcor(), shape.ycor()
 	width, height = get_shape_dimensions(shape)
+	
+	# Calculate the bounds using helper function
+	return calculate_bounds_from_center(x, y, width, height)
+
+def calculate_bounds_from_center(x:float, y:float, width:float, height:float) -> tuple[float, float, float, float]:
+	'''
+	Calculate bounds from center position and dimensions.
+	
+	Args:
+		x, y: Center position.
+		width, height: Dimensions of the box.
+		
+	Returns:
+		tuple: Bounds as (left, right, bottom, top).
+	'''
 	half_width, half_height = width/2, height/2
 	
-	# Calculate the bounds
 	left = x - half_width
 	right = x + half_width
 	bottom = y - half_height
@@ -116,6 +301,7 @@ def get_shape_bounds(shape:turtle.Turtle) -> tuple[float, float, float, float]:
 def get_shape_dimensions(shape:turtle.Turtle) -> tuple[float, float]:
 	'''
 	Get the width and height of a shape based on its stretch factors.
+	Uses a uniform base size for all shapes to avoid shape-specific handling.
 	
 	Args:
 		shape (turtle.Turtle): The shape to get dimensions for.
@@ -126,126 +312,16 @@ def get_shape_dimensions(shape:turtle.Turtle) -> tuple[float, float]:
 	# Get shape's stretch factors
 	stretch_wid, stretch_len, _ = shape.shapesize()
 	
-	# Get base dimensions based on shape type
-	base_width, base_height = get_base_dimensions(shape)
+	# Use standard base dimensions for all shapes
+	# This is a reasonable approximation for all shapes in shapes.txt
+	base_width = 30.0  # Standard width for all shapes
+	base_height = 30.0  # Standard height for all shapes
 	
 	# Calculate actual dimensions
 	width = base_width * stretch_len
 	height = base_height * stretch_wid
 	
 	return width, height
-
-def get_base_dimensions(shape:turtle.Turtle) -> tuple[float, float]:
-	'''
-	Get the base dimensions for a shape based on its type.
-	
-	Args:
-		shape (turtle.Turtle): The shape to get base dimensions for.
-		
-	Returns:
-		tuple[float, float]: Base width and height of the shape.
-	'''
-	shape_name = shape.shape()
-	
-	# For standard shapes
-	if shape_name == 'circle':
-		return 20, 20
-	elif shape_name == 'square':
-		return 20, 20
-	elif shape_name == 'triangle':
-		return 20, 20
-	elif shape_name == 'classic': # Arrow shape
-		return 20, 20
-	
-	# For custom shapes from the shapes.txt file
-	if '_rect' in shape_name:
-		return 30, 30  # Rectangles
-	elif '_star' in shape_name:
-		return 45, 45  # Stars (larger)
-	
-	# Default for other shapes
-	return 30, 30
-
-########################################################
-################## Bounding Box Check ##################
-########################################################
-
-def box_check(bounds1:tuple[float, float, float, float], 
-						bounds2:tuple[float, float, float, float]) -> str:
-	'''
-	Check the relationship between two shapes' bounds.
-	
-	Args:
-		bounds1 (tuple): First bounds (left, right, bottom, top).
-		bounds2 (tuple): Second bounds (left, right, bottom, top).
-		
-	Returns:
-		str: Relationship between shapes:
-			- 'overlap': Shapes intersect or touch
-			- 'inside': One shape is completely inside the other
-			- 'separate': Shapes don't overlap or contain each other
-	'''
-	left1, right1, bottom1, top1 = bounds1
-	left2, right2, bottom2, top2 = bounds2
-	
-	# Check if shapes are separate (no overlap)
-	if right1 < left2 or right2 < left1 or top1 < bottom2 or top2 < bottom1:
-		return 'separate'
-	
-	# Check if one shape is inside the other
-	# Check if bounds1 is inside bounds2
-	if (left1 >= left2 and right1 <= right2 and 
-		bottom1 >= bottom2 and top1 <= top2):
-		return 'inside'
-	
-	# Check if bounds2 is inside bounds1
-	if (left2 >= left1 and right2 <= right1 and 
-		bottom2 >= bottom1 and top2 <= top1):
-		return 'inside'
-	
-	# If we reach here, shapes overlap but neither is inside the other
-	return 'overlap'
-
-def is_shape_overlapped_any(shape:turtle.Turtle, shapes:list[turtle.Turtle]) -> bool:
-	'''
-	TODO: check if shape is overlapped with any of the shapes
-	TODO: problem decomposition, clean code, refactoring
-
-	Check if shape is overlapped with any of the shapes in the list.
-	Uses problem decomposition by checking for various overlap conditions.
-
-	Args:
-		shape (turtle.Turtle): The shape to check for overlap.
-		shapes (list[turtle.Turtle]): List of shapes to check overlap with.
-	
-	Returns:
-		bool: True if the shape overlaps with any shape in the list, False otherwise.
-	'''
-	# Handle edge cases
-	if is_empty_or_self_check(shape, shapes):
-		return False
-	
-	# Get shape bounds
-	shape_bounds = get_shape_bounds(shape)
-	
-	# Check against each existing shape
-	for existing_shape in shapes:
-		# Quick distance check first for efficiency
-		if not are_shapes_potentially_overlapping(shape, existing_shape):
-			continue
-		
-		# Get bounds of existing shape
-		existing_bounds = get_shape_bounds(existing_shape)
-		
-		# Check relationship between shapes
-		relationship = box_check(shape_bounds, existing_bounds)
-		if relationship in ['overlap', 'inside']:
-			return True
-	
-	# No overlap found
-	return False
-
-
 
 ############################################
 ################## template ################
