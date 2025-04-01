@@ -51,6 +51,8 @@ g_range_y = None
 
 def is_shape_overlapped_any(shape:turtle.Turtle, shapes:list[turtle.Turtle]) -> bool:
 	'''
+	TODO: check if shape is overlapped with any of the shapes
+	TODO: problem decomposition, clean code, refactoring
 	Check if shape is overlapped with any of the shapes in the list.
 	Uses a uniform boundary calculation approach for all shapes.
 
@@ -204,7 +206,7 @@ def is_one_bound_inside_other(bounds1:tuple[float, float, float, float],
 	'''
 	Check if one bound is completely inside the other.
 	
-	Args:
+	Args:.
 		bounds1 (tuple): First bounds (left, right, bottom, top).
 		bounds2 (tuple): Second bounds (left, right, bottom, top).
 		
@@ -313,9 +315,8 @@ def get_shape_dimensions(shape:turtle.Turtle) -> tuple[float, float]:
 	stretch_wid, stretch_len, _ = shape.shapesize()
 	
 	# Use standard base dimensions for all shapes
-	# This is a reasonable approximation for all shapes in shapes.txt
-	base_width = 30.0  # Standard width for all shapes
-	base_height = 30.0  # Standard height for all shapes
+	base_width = 30.0  
+	base_height = 30.0
 	
 	# Calculate actual dimensions
 	width = base_width * stretch_len
