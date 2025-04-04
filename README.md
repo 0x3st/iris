@@ -12,17 +12,16 @@ A Python-based tool for optimizing the placement of shapes within a given area, 
 - Efficient overlap detection using a two-phase approach:
   - Quick bounding box check
   - Precise shape-specific overlap detection
+  - Bounding Circle Check (no help actually)
 - Density optimization through strategic placement algorithms
 - Visualization of placed shapes
 - Configurable parameters for shape generation and placement
 
 ## Requirements
 
-- Python 3.x
+- Python 3.13
 - Required packages:
-  - numpy
-  - matplotlib
-  - shapely
+  - build-in is enough.
 
 ## Installation
 
@@ -101,8 +100,5 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-[Your chosen license]
-
-## Contact
-
-[Your contact information]
+1. No Plagiarism
+2. Citation Required for reuse
