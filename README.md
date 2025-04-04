@@ -1,3 +1,5 @@
+anyone copy this for assignment 2 will be reported. this is the very beginning code that without further optimation.
+
 # Shape Placement Optimizer
 
 A Python-based tool for optimizing the placement of shapes within a given area, maximizing density while preventing overlaps. This project implements an efficient algorithm for placing various types of shapes (circles, rectangles, triangles, and polygons) in a way that minimizes wasted space.
