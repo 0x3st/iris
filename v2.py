@@ -26,7 +26,7 @@ import time
 import math
 
 # global constants
-YOUR_ID = '124020372'   # TODO: your student id
+YOUR_ID = 'xxx'   # TODO: your student id
 COLORS = ('green', 'blue', 'yellow', 'orange', 'purple', 'pink', 'brown')
 SHAPE_FILE = 'shapes.txt'
 SCREEN_DIM_X = 0.7  # screen width factor
