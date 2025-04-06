@@ -23,12 +23,11 @@ Process:
 import turtle
 import random
 import time
-import math
 
 # global constants
 YOUR_ID = 'xxx'   # TODO: your student id
 COLORS = ('green', 'blue', 'yellow', 'orange', 'purple', 'pink', 'brown')
-SHAPE_FILE = 'shapes.txt'
+SHAPE_FILE = 'shapes1.txt'
 SCREEN_DIM_X = 0.7  # screen width factor
 SCREEN_DIM_Y = 0.7  # screen height factor
 XY_SPAN = 0.8       # canvas factor 
@@ -71,7 +70,8 @@ def get_perpendicular(v:list) -> tuple:
         tuple: Normalized perpendicular vector. Returns (0, 0) if input is a zero vector.
     '''
     vx, vy = v
-    length = math.sqrt(vx*vx + vy*vy)
+    length = (vx*vx + vy*vy)**0.5
+	# Avoid division by zero
     if length == 0:
         return (0, 0)
     return (-vy/length, vx/length)
@@ -108,7 +108,6 @@ def get_polygon_coordinates(shape: turtle.Turtle) -> list:
     sy, sx, _ = shape.shapesize()
     raw_poly = shape.get_shapepoly()
     x_pos, y_pos = shape.xcor(), shape.ycor()
-    # Apply the stretch factors to the raw polygon coordinates
     return [(x_pos + px * sx, y_pos + py * sy) for px, py in raw_poly]
 
 def is_shape_overlapped_any(shape:turtle.Turtle, shapes:list[turtle.Turtle]) -> bool:
@@ -123,14 +122,11 @@ def is_shape_overlapped_any(shape:turtle.Turtle, shapes:list[turtle.Turtle]) -> 
 	Returns:
 		bool: True if the shape overlaps with any other shape, False otherwise.
 	'''
-    # Get the polygon coordinates of the new shape
     poly_new = get_polygon_coordinates(shape)
-    
-    # Iterate through the list of existing shapes
+
     for other in shapes:
         poly_old = get_polygon_coordinates(other)
         
-        # Check if the new shape overlaps with the existing shape
         if box_overlap(poly_new, poly_old):
             return True
     
@@ -147,10 +143,6 @@ def box_overlap(poly1:list, poly2:list) -> bool:
 	Returns:
 		bool: True if the polygons overlap, False otherwise.
 	'''
-    # Sperate the polygons into their x and y coordinates
-    
-    # Calculate the min and max x and y coordinates for both polygons
-    
     edges1 = get_edges(poly1)
     edges2 = get_edges(poly2)
     
