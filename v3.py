@@ -45,6 +45,29 @@ g_screen = None
 g_range_x = None
 g_range_y = None
 
+
+def is_shape_overlapped_any(shape:turtle.Turtle, shapes:list[turtle.Turtle]) -> bool:
+    '''
+	TODO: check if shape is overlapped with any of the shapes
+	TODO: problem decomposition, clean code, refactoring
+
+	Args:
+		shape (turtle.Turtle): The shape to check for overlap.
+		shapes (list[turtle.Turtle]): List of shapes to check overlap with.
+	
+	Returns:
+		bool: True if the shape overlaps with any other shape, False otherwise.
+	'''
+    poly_new = get_polygon_coordinates(shape)
+
+    for other in shapes:
+        poly_old = get_polygon_coordinates(other)
+        
+        if box_overlap(poly_new, poly_old):
+            return True
+    
+    return False
+
 def get_projection(poly: list, axis:list) -> tuple:
     '''
     Calculate the projection of a polygon onto a given axis.
@@ -109,27 +132,6 @@ def get_polygon_coordinates(shape: turtle.Turtle) -> list:
     x_pos, y_pos = shape.xcor(), shape.ycor()
     return [(x_pos + px, y_pos + py) for px, py in raw_poly]
 
-def is_shape_overlapped_any(shape:turtle.Turtle, shapes:list[turtle.Turtle]) -> bool:
-    '''
-	TODO: check if shape is overlapped with any of the shapes
-	TODO: problem decomposition, clean code, refactoring
-
-	Args:
-		shape (turtle.Turtle): The shape to check for overlap.
-		shapes (list[turtle.Turtle]): List of shapes to check overlap with.
-	
-	Returns:
-		bool: True if the shape overlaps with any other shape, False otherwise.
-	'''
-    poly_new = get_polygon_coordinates(shape)
-
-    for other in shapes:
-        poly_old = get_polygon_coordinates(other)
-        
-        if box_overlap(poly_new, poly_old):
-            return True
-    
-    return False
 
 def box_overlap(poly1:list, poly2:list) -> bool:
     '''
